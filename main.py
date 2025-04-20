@@ -1,6 +1,7 @@
 import ASR, GPT, threading, time, TTS
 import numpy as np
 import asyncio
+import websockets
 
 PROMPT_FILE = "prompt.txt"
 
@@ -8,6 +9,7 @@ with open(PROMPT_FILE) as f:
     sys_prompt = f.read()
 
 if __name__ == "__main__":
+    use_MMD = True
     myASR = ASR.ASR()
 
     threading.Thread(target=myASR.worker, daemon=True).start()
@@ -20,16 +22,22 @@ if __name__ == "__main__":
     threading.Thread(target=myGPT.turn_taking, daemon=True, args=(myASR,)).start()
 
     myTTS = TTS.TTS()
-    loop = asyncio.new_event_loop()
+    loop_voice_synth = asyncio.new_event_loop()
 
-    def loop_runner():
+    def loop_runner(loop:asyncio.AbstractEventLoop):
         asyncio.set_event_loop(loop)
         loop.run_forever()
 
-    threading.Thread(target=loop_runner, daemon=True).start()
-    asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop).result()
+    async def server_main():
+        await websockets.serve(myTTS.send_voice, "localhost", 9001)
 
-    threading.Thread(target=myTTS.speak, daemon=True).start()
+    threading.Thread(target=loop_runner, daemon=True, args=(loop_voice_synth,)).start()
+    asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop_voice_synth).result()
+    
+    if use_MMD:
+        asyncio.run_coroutine_threadsafe(server_main(), loop_voice_synth).result()
+    else:
+        threading.Thread(target=myTTS.speak, daemon=True).start()
 
     while True:
         if not myASR.user_utterance.empty():
@@ -45,16 +53,18 @@ if __name__ == "__main__":
                 content = chunk.choices[0].delta.content
                 if content == None:
                     continue
-                if  len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪"]) and text_tmp != "":
+                if  len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪", "♡"]) and text_tmp != "":
                     if content[-1] in set(["！", "？"]):
                         text_tmp += content
                     print("Agent speak :", text_tmp)
-                    asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop)
+                    asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
                     text_tmp = ""
                 else:
                     text_tmp += content
                 text_full += content
                 # print(content, end="")
+            if text_tmp != "":
+                asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
             print(text_full)
             myGPT.update_messages(text_full, "assistant")
             myGPT.robot_turn = False

@@ -8,6 +8,8 @@ import io
 import time
 import asyncio
 import threading
+import websockets
+import librosa
 
 class TTS:
     def __init__(self, speakerID=8, onnxruntime_file="voicevox_core/onnxruntime/lib/voicevox_onnxruntime.dll", OpenJtalk_dict="voicevox_core/dict/open_jtalk_dic_utf_8-1.11", mode="CPU", vvm="voicevox_core/models/vvms/0.vvm"):
@@ -55,6 +57,35 @@ class TTS:
                     sd.play(data, f.samplerate)
                     sd.wait()
             time.sleep(0.5)
+
+    async def send_voice(self, ws:websockets.ServerConnection):
+        chunk_samples = 2048
+        while True:
+            if not self.q_audio.empty():
+                await ws.send("__AV_START\n")
+                await ws.send("__AV_SETMODEL,0\n")
+                audio = self.q_audio.get()
+                audio_bytes = io.BytesIO(audio)
+                
+                with sf.SoundFile(audio_bytes) as f:
+                    data = f.read(dtype='float32')  # 16bit signed integer
+                    samplerate = f.samplerate
+                
+                data_16k = librosa.resample(data, orig_sr=samplerate, target_sr=16000)
+                pcm_bytes = (data_16k * 20000).astype('int16').tobytes()
+
+                pos = 0
+                while pos < len(pcm_bytes):
+                    chunk = pcm_bytes[pos:pos + chunk_samples]
+                    chunk_len = len(chunk)
+                    header = f"SND{chunk_len:04}".encode("ascii")
+                    payload = header + chunk
+                    if chunk != b'':
+                        await ws.send(payload)
+                    pos += chunk_samples
+                    await asyncio.sleep(0.01)  # 遅延を入れてスムーズに送信（調整可）
+
+            await asyncio.sleep(0.1)
 
 # if __name__ == "__main__":
     

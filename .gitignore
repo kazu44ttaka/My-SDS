@@ -3,3 +3,5 @@
 *.exe
 voicevox_core
 __pycache__
+*.mdf
+*.sh
