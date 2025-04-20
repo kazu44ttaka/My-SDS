@@ -16,6 +16,8 @@ if __name__ == "__main__":
 
     myGPT = GPT.GPT()
     myGPT.init_prompt(sys_prompt=sys_prompt)
+    
+    threading.Thread(target=myGPT.vad_to_robot_turn, daemon=True, args=(myASR,)).start()
 
     myTTS = TTS.TTS()
     asyncio.run(myTTS.init_model())
@@ -23,8 +25,6 @@ if __name__ == "__main__":
     threading.Thread(target=myTTS.speak, daemon=True).start()
 
     while True:
-        myGPT.vad_to_robot_turn(myASR.vad_full, len(np.concatenate(myASR.buf_user)))
-
         if not myASR.user_utterance.empty():
             user_utterance = myASR.user_utterance.get()
             print(user_utterance)

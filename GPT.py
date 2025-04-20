@@ -1,5 +1,8 @@
 from openai import OpenAI
 import queue
+import time
+import numpy as np
+import ASR
 
 KEY_FILE = "key.txt"
 
@@ -40,13 +43,15 @@ class GPT:
             self.messages.append({"role": role, "content": message})
         return self.messages
 
-    def vad_to_robot_turn(self, vad, full_length):
-        if not self.messages[-1]["role"] == "assistant":
-            if len(vad) > 0:
-                if full_length - vad[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
-                    self.robot_turn = True
-            else:
-                self.robot_turn = False
+    def vad_to_robot_turn(self, ASR:ASR):
+        while True:
+            if not self.messages[-1]["role"] == "assistant":
+                if len(ASR.vad_full) > 0:
+                    if len(np.concatenate(ASR.buf_user)) - ASR.vad_full[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
+                        self.robot_turn = True
+                else:
+                    self.robot_turn = False
+            time.sleep(0.5)
 
 # if __name__ == "__main__":
 #     messages = [
