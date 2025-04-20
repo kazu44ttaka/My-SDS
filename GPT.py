@@ -17,7 +17,7 @@ class GPT:
         self.context_len = context_len
         self.robot_turn = False
         self.SAMPLE_RATE = 16000
-        self.MAX_SILENCE_TIME = 0.5
+        self.MAX_SILENCE_TIME = 0.3
         self.vad = []
         self.full_length = -1
         

@@ -44,17 +44,18 @@ if __name__ == "__main__":
             for chunk in stream:
                 content = chunk.choices[0].delta.content
                 if content == None:
-                    print()
-                    break
-                text_full += content
-                if len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪"]) and text_tmp != "":
-                    text_tmp += content
-                    print("speak :", text_tmp)
+                    continue
+                if  len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪"]) and text_tmp != "":
+                    if content[-1] in set(["！", "？"]):
+                        text_tmp += content
+                    print("Agent speak :", text_tmp)
                     asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop)
                     text_tmp = ""
                 else:
                     text_tmp += content
+                text_full += content
                 # print(content, end="")
+            print(text_full)
             myGPT.update_messages(text_full, "assistant")
             myGPT.robot_turn = False
 
