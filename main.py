@@ -20,7 +20,14 @@ if __name__ == "__main__":
     threading.Thread(target=myGPT.vad_to_robot_turn, daemon=True, args=(myASR,)).start()
 
     myTTS = TTS.TTS()
-    asyncio.run(myTTS.init_model())
+    loop = asyncio.new_event_loop()
+
+    def loop_runner():
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    threading.Thread(target=loop_runner, daemon=True).start()
+    asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop).result()
 
     threading.Thread(target=myTTS.speak, daemon=True).start()
 
@@ -43,7 +50,7 @@ if __name__ == "__main__":
                 if len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪"]) and text_tmp != "":
                     text_tmp += content
                     print("speak :", text_tmp)
-                    asyncio.run(myTTS.voice_synth(text_tmp))
+                    asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop)
                     text_tmp = ""
                 else:
                     text_tmp += content
