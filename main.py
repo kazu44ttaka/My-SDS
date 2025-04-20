@@ -56,7 +56,6 @@ if __name__ == "__main__":
                 if  len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪", "♡"]) and text_tmp != "":
                     if content[-1] in set(["！", "？"]):
                         text_tmp += content
-                    print("Agent speak :", text_tmp)
                     asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
                     text_tmp = ""
                 else:
@@ -64,8 +63,9 @@ if __name__ == "__main__":
                 text_full += content
                 # print(content, end="")
             if text_tmp != "":
+                print("Agent speak :", text_tmp)
                 asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
-            print(text_full)
+            # print(text_full)
             myGPT.update_messages(text_full, "assistant")
             myGPT.robot_turn = False
 
