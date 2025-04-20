@@ -6,9 +6,11 @@ import sounddevice as sd
 import soundfile as sf
 import io
 import time
+import asyncio
+import threading
 
 class TTS:
-    def __init__(self, speakerID=8, onnxruntime_file="voicevox_core/onnxruntime/lib/voicevox_onnxruntime.dll", OpenJtalk_dict="voicevox_core/dict/open_jtalk_dic_utf_8-1.11", mode="AUTO", vvm="voicevox_core/models/vvms/0.vvm"):
+    def __init__(self, speakerID=8, onnxruntime_file="voicevox_core/onnxruntime/lib/voicevox_onnxruntime.dll", OpenJtalk_dict="voicevox_core/dict/open_jtalk_dic_utf_8-1.11", mode="CPU", vvm="voicevox_core/models/vvms/0.vvm"):
         self.speakerID = speakerID
         self.q_audio = queue.Queue()
         self.onnxruntime_file = onnxruntime_file
@@ -25,7 +27,7 @@ class TTS:
             acceleration_mode=self.mode,
             cpu_num_threads=max(
                 multiprocessing.cpu_count(), 2
-            ),  # https://github.com/VOICEVOX/voicevox_core/issues/888
+            ),
         )
         async with await VoiceModelFile.open(self.vvm) as model:
             await self.synthesizer.load_voice_model(model)
@@ -57,10 +59,19 @@ class TTS:
 # if __name__ == "__main__":
     
 #     myTTS = TTS()
+#     loop = asyncio.new_event_loop()
+
+#     def loop_runner():
+#         asyncio.set_event_loop(loop)
+#         loop.run_forever()
+
+#     threading.Thread(target=loop_runner, daemon=True).start()
+#     asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop).result()
+
 #     threading.Thread(target=myTTS.speak, daemon=True).start()
     
-#     myTTS.voice_synth_async("こんにちは")
+#     asyncio.run_coroutine_threadsafe(myTTS.voice_synth("こんにちは！"), loop)
     
 #     while True:
-#         time.sleep(0.5)
+#         time.sleep(1.0)
     

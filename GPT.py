@@ -43,7 +43,7 @@ class GPT:
             self.messages.append({"role": role, "content": message})
         return self.messages
 
-    def vad_to_robot_turn(self, ASR:ASR):
+    def turn_taking(self, ASR:ASR):
         while True:
             if not self.messages[-1]["role"] == "assistant":
                 if len(ASR.vad_full) > 0:

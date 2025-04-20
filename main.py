@@ -17,7 +17,7 @@ if __name__ == "__main__":
     myGPT = GPT.GPT()
     myGPT.init_prompt(sys_prompt=sys_prompt)
     
-    threading.Thread(target=myGPT.vad_to_robot_turn, daemon=True, args=(myASR,)).start()
+    threading.Thread(target=myGPT.turn_taking, daemon=True, args=(myASR,)).start()
 
     myTTS = TTS.TTS()
     loop = asyncio.new_event_loop()
