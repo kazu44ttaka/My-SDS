@@ -1,0 +1,5 @@
+*.txt
+*.wav
+*.exe
+voicevox_core
+__pycache__

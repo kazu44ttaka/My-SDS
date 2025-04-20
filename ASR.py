@@ -13,43 +13,49 @@ class ASR:
         self.SAMPLE_RATE = 16000
         self.BLOCK = 320
         self.VAD_LEN = 10
+        self.buf_user = []
+        self.vad_full = []
 
         self.audio_q = queue.Queue()
+        self.user_utterance = queue.Queue()
         
         # self.whisper = WhisperModel(model_size_or_path=self.model_size_or_path, device=self.device, compute_type=self.compute_type)
         self.whisper = WhisperModel(model, device=self.device, compute_type=self.compute_type)
-        
-        self.vad = silero_vad.load_silero_vad()
+    
+        self.vad_model1 = silero_vad.load_silero_vad()
+        self.vad_model2 = silero_vad.load_silero_vad()
 
     def worker(self):
-        buf = []
+        buf_tmp = []
         buf_voice = []
         trigger = False
         vad_count = 0
         vad = []
         while True:
             data = self.audio_q.get()
-            buf.append(data[:,0])
-            buf = buf[- int(self.SAMPLE_RATE * self.VAD_LEN):]
+            self.buf_user.append(data[:,0])
+            self.buf_user = self.buf_user[- int(self.VAD_LEN / (self.BLOCK / self.SAMPLE_RATE)):]
 
+            buf_tmp.append(data[:,0])
             # 音声がある程度溜まったら処理開始
-            if len(buf) < 1.0 / (self.BLOCK / self.SAMPLE_RATE):
+            if len(buf_tmp) < 1.0 / (self.BLOCK / self.SAMPLE_RATE):
                 continue
 
             # vad
             vad_count += 1
-            if vad_count > 8:
-                full = np.concatenate(buf)
-                vad = silero_vad.get_speech_timestamps(full, 
-                                                       self.vad,  
-                                                       sampling_rate=self.SAMPLE_RATE,
-                                                       threshold=0.5,        # VADの出力を音声と判断するしきい値
-                                                       min_speech_duration_ms=150,      # 発話とみなす最短長（ミリ秒）
-                                                       max_speech_duration_s=self.VAD_LEN,        # 発話区間の最大長（秒）
-                                                       min_silence_duration_ms=50,     # 区切りとみなす無音の最短長（ミリ秒）
-                                                       window_size_samples=1024,        # 内部処理に使うウィンドウサイズ（サンプル数）
-                                                       speech_pad_ms=100,                # 出力範囲の前後に付け足すバッファ時間（ミリ秒）
-                                                       )
+            if vad_count > 5:
+                full = np.concatenate(buf_tmp)
+                vad = silero_vad.get_speech_timestamps(
+                    full, 
+                    self.vad_model1,  
+                    sampling_rate=self.SAMPLE_RATE,
+                    threshold=0.5,                      # VADの出力を音声と判断するしきい値
+                    min_speech_duration_ms=150,         # 発話とみなす最短長（ミリ秒）
+                    max_speech_duration_s=self.VAD_LEN, # 発話区間の最大長（秒）
+                    min_silence_duration_ms=50,         # 区切りとみなす無音の最短長（ミリ秒）
+                    window_size_samples=1024,           # 内部処理に使うウィンドウサイズ（サンプル数）
+                    speech_pad_ms=100,                  # 出力範囲の前後に付け足すバッファ時間（ミリ秒）
+                    )
                 vad_count = 0
 
                 # 有音区間だけを推論に回す
@@ -59,22 +65,38 @@ class ASR:
                     if len(full) - vad[-1]["end"] > self.SAMPLE_RATE * self.SILENCE_TIME:
                         trigger = True
                 else:
-                    buf.clear()
+                    buf_tmp.clear()
 
             # バッファが一定秒数に達したら or 無音区間を検出したら推論
             if trigger or (len(np.concatenate(buf_voice))  if len(buf_voice) > 0 else len(buf_voice)) >= self.SAMPLE_RATE * self.CHUNK_SEC:
                 segment = np.concatenate(buf_voice)
-                buf.clear()
+                buf_tmp.clear()
 
                 segments, _ = self.whisper.transcribe(segment, 
                                                       language="ja", 
                                                       without_timestamps=True,
                                                       beam_size=5)
                 for seg in segments:
-                    print(f"[{seg.start:.2f}-{seg.end:.2f}] {seg.text}")
+                    # print(f"[{seg.start:.2f}-{seg.end:.2f}] {seg.text}")
+                    self.user_utterance.put(seg.text)
                 trigger = False
 
             buf_voice.clear()
+
+    def process_vad(self):
+        while True:
+            if len(self.buf_user) > 0:
+                self.vad_full = silero_vad.get_speech_timestamps(
+                np.concatenate(self.buf_user), 
+                self.vad_model2,  
+                sampling_rate=self.SAMPLE_RATE,
+                threshold=0.5,                      # VADの出力を音声と判断するしきい値
+                min_speech_duration_ms=150,         # 発話とみなす最短長（ミリ秒）
+                max_speech_duration_s=self.VAD_LEN, # 発話区間の最大長（秒）
+                min_silence_duration_ms=50,         # 区切りとみなす無音の最短長（ミリ秒）
+                window_size_samples=1024,           # 内部処理に使うウィンドウサイズ（サンプル数）
+                speech_pad_ms=100,                  # 出力範囲の前後に付け足すバッファ時間（ミリ秒）
+                )
 
     def callback(self, indata, frames, t, status):
         if status: 
@@ -92,15 +114,15 @@ class ASR:
             while True: 
                 # if self.audio_q.qsize() > 0:
                 #     print("qsize :", self.audio_q.qsize(), "*", self.audio_q.queue[0].shape)
-                time.sleep(1)
+                time.sleep(0.5)
 
-if __name__ == "__main__":
-    myASR = ASR()
+# if __name__ == "__main__":
+#     myASR = ASR()
     
-    threading.Thread(target=myASR.worker, daemon=True).start()
-    threading.Thread(target=myASR.stream, daemon=True).start()
+#     threading.Thread(target=myASR.worker, daemon=True).start()
+#     threading.Thread(target=myASR.stream, daemon=True).start()
     
-    while True:
-        print("latency :", myASR.audio_q.qsize() * (myASR.BLOCK / myASR.SAMPLE_RATE), "s")
-        time.sleep(1)
+#     while True:
+#         print("latency :", myASR.audio_q.qsize() * (myASR.BLOCK / myASR.SAMPLE_RATE), "s")
+#         time.sleep(1)
         
