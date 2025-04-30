@@ -2,12 +2,26 @@ import ASR, GPT, threading, time, TTS
 import numpy as np
 import asyncio
 import websockets
+import re
 
 # プロンプトを記載したファイルを指定
 PROMPT_FILE = "prompt.txt"
 
 with open(PROMPT_FILE) as f:
     sys_prompt = f.read()
+
+# ChatGPTの出力から除去する絵文字を定義
+emoji_pattern = re.compile(
+        "["
+        u"\U0001F600-\U0001F64F"
+        u"\U0001F300-\U0001F5FF"
+        u"\U0001F680-\U0001F6FF"
+        u"\U0001F1E0-\U0001F1FF"
+        u"\U00002700-\U000027BF"
+        u"\U0001F900-\U0001F9FF"
+        u"\U00002600-\U000026FF"
+        u"\U00002500-\U00002BEF"
+        "]+", flags=re.UNICODE)
 
 if __name__ == "__main__":
     # MMD-Agentを用いるか
@@ -64,18 +78,18 @@ if __name__ == "__main__":
                     if content[-1] in set(["！", "？"]):
                         text_tmp += content
                     print("Agent speak :", text_tmp)
-                    asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
+                    asyncio.run_coroutine_threadsafe(myTTS.voice_synth(emoji_pattern.sub("、", text_tmp)), loop_voice_synth)
                     text_tmp = ""
                 else:
                     text_tmp += content
                 text_full += content
                 # print(content, end="")
-            if text_tmp != "":
+            if emoji_pattern.sub(r'', text_tmp) != "":
                 print("Agent speak :", text_tmp)
-                asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
+                asyncio.run_coroutine_threadsafe(myTTS.voice_synth(emoji_pattern.sub("、", text_tmp)), loop_voice_synth)
             # print(text_full)
             myGPT.update_messages(text_full, "assistant")
             myGPT.robot_turn = False
 
         # print("latency :", myASR.audio_q.qsize() * (myASR.BLOCK / myASR.SAMPLE_RATE), "s")
-        time.sleep(0.5)
+        time.sleep(0.1)

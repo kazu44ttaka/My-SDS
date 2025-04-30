@@ -54,7 +54,7 @@ class GPT:
                         self.robot_turn = True
                 else:
                     self.robot_turn = False
-            time.sleep(0.5)
+            time.sleep(0.05)
 
 # if __name__ == "__main__":
 #     messages = [

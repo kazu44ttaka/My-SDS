@@ -59,7 +59,7 @@ class TTS:
                     data = f.read(dtype='float32')
                     sd.play(data, f.samplerate)
                     sd.wait()
-            time.sleep(0.5)
+            time.sleep(0.05)
 
     # MMD-Agentに音声を送信
     async def send_voice(self, ws:websockets.ServerConnection):
