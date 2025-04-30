@@ -4,6 +4,7 @@ import time
 import numpy as np
 import ASR
 
+# ChatGPTのkeyが書かれたファイルを指定
 KEY_FILE = "key.txt"
 
 with open(KEY_FILE, "r", encoding="utf-8_sig") as f:
