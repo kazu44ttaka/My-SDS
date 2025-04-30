@@ -3,28 +3,33 @@ from faster_whisper import WhisperModel
 import silero_vad
 
 class ASR:
-    def __init__(self, model="large-v3", device="cuda", compute_type="int8_float16", model_size_or_path="deepdml/faster-whisper-large-v3-turbo-ct2"):
-        self.model = model
-        self.model_size_or_path = model_size_or_path
-        self.device = device
-        self.compute_type = compute_type
-        self.SILENCE_TIME = 0.1
-        self.CHUNK_SEC = 2.5
-        self.SAMPLE_RATE = 16000
-        self.BLOCK = 320
-        self.VAD_LEN = 10
-        self.buf_user = []
-        self.vad_full = []
+    def __init__(self, model="large-v3", device="cuda", compute_type="int8_float16", model_size_or_path="deepdml/faster-whisper-large-v3-turbo-ct2", use_path=False):
+        self.model = model                               # fast-Whisperのモデル指定
+        self.model_size_or_path = model_size_or_path     # 同上
+        self.device = device                             # 動作デバイス指定
+        self.compute_type = compute_type                 # 演算精度指定
+        self.SILENCE_TIME = 0.1                          # 発話の区切りを検出する秒数(秒)
+        self.CHUNK_SEC = 2.5                             # ASRモデルに渡す秒数の間隔(秒)
+        self.SAMPLE_RATE = 16000                         # サンプリングレート
+        self.BLOCK = 320                                 # 1ブロック当たりのサンプル数
+        self.VAD_LEN = 10                                # VADを実施する秒数(秒)
+        self.buf_user = []                               # 過去VAD_LEN秒間のユーザーの音声を保存する
+        self.vad_full = []                               # VAD_LEN秒のVAD結果を保存
 
-        self.audio_q = queue.Queue()
-        self.user_utterance = queue.Queue()
+        self.audio_q = queue.Queue()                     # マイクからの音声を保持するQueue
+        self.user_utterance = queue.Queue()              # ASR結果のテキストを保持するQueue
         
-        # self.whisper = WhisperModel(model_size_or_path=self.model_size_or_path, device=self.device, compute_type=self.compute_type)
-        self.whisper = WhisperModel(model, device=self.device, compute_type=self.compute_type)
-    
+        # Fast-whisperモデルを定義
+        if use_path:
+            self.whisper = WhisperModel(model_size_or_path=self.model_size_or_path, device=self.device, compute_type=self.compute_type)
+        else:
+            self.whisper = WhisperModel(model, device=self.device, compute_type=self.compute_type)
+
+        # VADモデルを2つ定義(ASR用とターンテイキング用)
         self.vad_model1 = silero_vad.load_silero_vad()
         self.vad_model2 = silero_vad.load_silero_vad()
 
+    # ASR
     def worker(self):
         buf_tmp = []
         buf_voice = []
@@ -41,7 +46,7 @@ class ASR:
             if len(buf_tmp) < 1.0 / (self.BLOCK / self.SAMPLE_RATE):
                 continue
 
-            # vad
+            # 5回に1回vad処理
             vad_count += 1
             if vad_count > 5:
                 full = np.concatenate(buf_tmp)
@@ -83,6 +88,7 @@ class ASR:
 
             buf_voice.clear()
 
+    # ターンテイキング用のVAD
     def process_vad(self):
         while True:
             if len(self.buf_user) > 0:
@@ -98,11 +104,14 @@ class ASR:
                 speech_pad_ms=100,                  # 出力範囲の前後に付け足すバッファ時間（ミリ秒）
                 )
 
+    # マイクからの音声をQueueに保持
     def callback(self, indata, frames, t, status):
         if status: 
             print(status)
+        print(indata.shape)
         self.audio_q.put(indata.copy())
-        
+    
+    # マイクからの音声を処理するループ
     def stream(self):
         with sd.InputStream(channels=1,
                             samplerate=self.SAMPLE_RATE,

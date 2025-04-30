@@ -11,18 +11,17 @@ with open(KEY_FILE, "r", encoding="utf-8_sig") as f:
 
 class GPT:
     def __init__(self, model="gpt-3.5-turbo", context_len=20):
-        self.api_key = api_key
-        self.model = model
-        self.client = OpenAI(api_key=self.api_key)
-        self.context_len = context_len
-        self.robot_turn = False
-        self.SAMPLE_RATE = 16000
-        self.MAX_SILENCE_TIME = 0.3
-        self.vad = []
-        self.full_length = -1
+        self.api_key = api_key                     # API Keyを指定
+        self.model = model                         # Chat GPTのモデルを指定
+        self.client = OpenAI(api_key=self.api_key) # クライアントを初期化
+        self.context_len = context_len             # GPTに送る会話数
+        self.robot_turn = False                    # ロボットのターンを制御
+        self.SAMPLE_RATE = 16000                   # サンプリングレート
+        self.MAX_SILENCE_TIME = 0.3                # ユーザーが話し終わってからエージェントが話し出すまでの時間(秒)
         
-        self.robot_utterance = queue.Queue()
+        self.robot_utterance = queue.Queue()       # ロボットの発話を管理するQueue
 
+    # 発話をストリームとして生成
     def create_response(self):
         stream = self.client.chat.completions.create(
             model=self.model,
@@ -31,11 +30,13 @@ class GPT:
         )
         return stream
 
+    # プロンプトを初期化
     def init_prompt(self, sys_prompt):
         self.messages = [
             {"role": "system", "content": sys_prompt},
         ]
 
+    # プロンプトを更新
     def update_messages(self, message, role):
         if len(self.messages) > self.context_len + 1:
             self.messages = [self.messages[0]] + self.messages[2:] + [{"role": role, "content": message}]
@@ -43,6 +44,7 @@ class GPT:
             self.messages.append({"role": role, "content": message})
         return self.messages
 
+    # ロボットがターンを取るかどうか
     def turn_taking(self, ASR:ASR):
         while True:
             if not self.messages[-1]["role"] == "assistant":

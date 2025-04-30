@@ -9,9 +9,10 @@ with open(PROMPT_FILE) as f:
     sys_prompt = f.read()
 
 if __name__ == "__main__":
-    use_MMD = True
+    use_MMD = False
     myASR = ASR.ASR()
 
+    # ASR、マイクからの音声処理、VAD用のスレッドを定義
     threading.Thread(target=myASR.worker, daemon=True).start()
     threading.Thread(target=myASR.stream, daemon=True).start()
     threading.Thread(target=myASR.process_vad, daemon=True).start()
@@ -19,6 +20,7 @@ if __name__ == "__main__":
     myGPT = GPT.GPT()
     myGPT.init_prompt(sys_prompt=sys_prompt)
     
+    # ターンテイキング用のスレッドを定義
     threading.Thread(target=myGPT.turn_taking, daemon=True, args=(myASR,)).start()
 
     myTTS = TTS.TTS()
@@ -31,6 +33,7 @@ if __name__ == "__main__":
     async def server_main():
         await websockets.serve(myTTS.send_voice, "localhost", 9001)
 
+    # 音声合成用のスレッドを定義
     threading.Thread(target=loop_runner, daemon=True, args=(loop_voice_synth,)).start()
     asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop_voice_synth).result()
     
@@ -40,11 +43,13 @@ if __name__ == "__main__":
         threading.Thread(target=myTTS.speak, daemon=True).start()
 
     while True:
+        # ユーザーの発話を取得
         if not myASR.user_utterance.empty():
             user_utterance = myASR.user_utterance.get()
             print(user_utterance)
             myGPT.update_messages(user_utterance, "user")
 
+        # ロボットがターンを取得したらGPTに渡してレスポンスを生成
         if myGPT.robot_turn:
             stream = myGPT.create_response()
             text_full = ""
@@ -56,6 +61,7 @@ if __name__ == "__main__":
                 if  len(content) > 0 and content[-1] in set(["、", "。", "！", "？", "♪", "♡"]) and text_tmp != "":
                     if content[-1] in set(["！", "？"]):
                         text_tmp += content
+                    print("Agent speak :", text_tmp)
                     asyncio.run_coroutine_threadsafe(myTTS.voice_synth(text_tmp), loop_voice_synth)
                     text_tmp = ""
                 else:

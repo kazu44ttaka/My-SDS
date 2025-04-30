@@ -13,13 +13,14 @@ import librosa
 
 class TTS:
     def __init__(self, speakerID=8, onnxruntime_file="voicevox_core/onnxruntime/lib/voicevox_onnxruntime.dll", OpenJtalk_dict="voicevox_core/dict/open_jtalk_dic_utf_8-1.11", mode="CPU", vvm="voicevox_core/models/vvms/0.vvm"):
-        self.speakerID = speakerID
-        self.q_audio = queue.Queue()
-        self.onnxruntime_file = onnxruntime_file
-        self.OpenJtalk_dict = OpenJtalk_dict
-        self.mode = mode
-        self.vvm = vvm
+        self.speakerID = speakerID               # speaker IDを指定
+        self.q_audio = queue.Queue()             # エージェントの音声を管理するQueue
+        self.onnxruntime_file = onnxruntime_file # onnxruntime_fileを指定
+        self.OpenJtalk_dict = OpenJtalk_dict     # OpenJtalk_dictを指定
+        self.mode = mode                         # 動作デバイスを指定
+        self.vvm = vvm                           # vvmモデルを指定
 
+    # 音声合成モデルを初期化
     async def init_model(self):
         ort = await Onnxruntime.load_once(filename=self.onnxruntime_file)
         ojt = await OpenJtalk.new(self.OpenJtalk_dict)
@@ -34,6 +35,7 @@ class TTS:
         async with await VoiceModelFile.open(self.vvm) as model:
             await self.synthesizer.load_voice_model(model)
     
+    # 音声合成
     async def voice_synth(self, text):
         
         # クエリ生成
@@ -43,6 +45,7 @@ class TTS:
         
         self.q_audio.put(audio)
 
+    # エージェントの音声を再生するループ
     def speak(self):
         while True:
             if not self.q_audio.empty():
@@ -58,6 +61,7 @@ class TTS:
                     sd.wait()
             time.sleep(0.5)
 
+    # MMD-Agentに音声を送信
     async def send_voice(self, ws:websockets.ServerConnection):
         chunk_samples = 2048
         while True:

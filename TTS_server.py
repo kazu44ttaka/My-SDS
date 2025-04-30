@@ -7,12 +7,13 @@ import queue
 import time
 
 # VoiceVoxをローカルホストでサーバーとして構築し、音声合成する
-# 音声合成される順番がバラバラなので非推奨
+# 音声合成される順番を制御できないため非推奨
 class TTS:
     def __init__(self, speakerID=1):
-        self.speakerID = speakerID
-        self.q_audio = queue.Queue()
+        self.speakerID = speakerID   # speaker IDを指定
+        self.q_audio = queue.Queue() # エージェントの音声を管理するQueue
 
+    # 音声合成
     def voice_synth(self, text):
         # クエリ生成
         query = requests.post(
@@ -33,10 +34,12 @@ class TTS:
         audio.raise_for_status()
 
         self.q_audio.put(audio.content)
-    
+
+    # 音声合成用のスレッドを作成
     def voice_synth_async(self, text):
         threading.Thread(target=self.voice_synth, daemon=True, args=(text,)).start()
 
+    # エージェントの音声を再生するループ
     def speak(self):
         while True:
             if not self.q_audio.empty():
@@ -45,7 +48,7 @@ class TTS:
                 # メモリ上のWAVデータを直接再生
                 audio_bytes = io.BytesIO(audio)
                 
-                # soundfileで読み込み → sounddeviceで再生
+                # soundfileで読み込み -> sounddeviceで再生
                 with sf.SoundFile(audio_bytes) as f:
                     data = f.read(dtype='float32')
                     sd.play(data, f.samplerate)
