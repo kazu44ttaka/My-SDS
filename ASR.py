@@ -108,7 +108,6 @@ class ASR:
     def callback(self, indata, frames, t, status):
         if status: 
             print(status)
-        print(indata.shape)
         self.audio_q.put(indata.copy())
     
     # マイクからの音声を処理するループ
