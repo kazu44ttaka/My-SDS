@@ -3,12 +3,14 @@ import numpy as np
 import asyncio
 import websockets
 
+# プロンプトを記載したファイルを指定
 PROMPT_FILE = "prompt.txt"
 
 with open(PROMPT_FILE) as f:
     sys_prompt = f.read()
 
 if __name__ == "__main__":
+    # MMD-Agentを用いるか
     use_MMD = False
     myASR = ASR.ASR()
 
