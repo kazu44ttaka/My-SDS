@@ -6,12 +6,14 @@ faster-Whisper、ChatGPT API、VOICEVOX coreを組み合わせた音声対話シ
 - それなりのスペックをもったデスクトップPC
   + Intel 第13世代以上かそれに相当するCPU
   + VRAM 6GB以上のNVIDIA製GPU
+- Python 3.12.7
+  + ほかのバージョンでの動作は確認していません
 - CUDA 12.6以上
   + 対応するcuDNNもインストールしてください
   + 11.xは動かない可能性が高いです
 
 # インストール
-※各モデルのライセンスに関しては対応するgit レポジトリを参照してください。
+※このレポジトリのコードはMITライセンスで公開されています。各ライブラリのライセンスについては対応するgithubレポジトリを参照してください。
 ### クローン
 まず、レポジトリをローカル環境へクローンしましょう。
 
@@ -46,6 +48,8 @@ pip install git+https://github.com/guillaumekln/faster-whisper.git
 
 初回動作時に指定されたモデルが自動でダウンロードされます。
 
+推論に用いるモデルのデフォルトは`large-v3`となっていますが、処理が重い場合はパラメータで`medium`などに変えることができます。各モデルは初回実行時に自動でダウンロードされます。
+
 ### VOICEVOX coreのセットアップ
 TTSにはVOICEVOX coreというものを使います。
 
@@ -66,6 +70,8 @@ pip install https://github.com/VOICEVOX/voicevox_core/releases/download/0.16.0/v
 ```
 
 ここまででTTSのセットアップは完了です。
+
+合成される音声のデフォルトは[春日部つむぎ](https://tsumugi-official.studio.site/)になっていますが、TTSのパラメータで好きな音声を指定することができます。
 
 # 諸準備
 ### プロンプトファイルの指定
