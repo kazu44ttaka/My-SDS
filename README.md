@@ -70,6 +70,7 @@ pip install https://github.com/VOICEVOX/voicevox_core/releases/download/0.16.0/v
 # 諸準備
 ### プロンプトファイルの指定
 レポジトリをクローンした場所(C: \\...\My-SDS)にChatGPTに与えるプロンプトを書いたテキストファイルをおいてください。ファイル名は例えば`prompt.txt`などとし、下記のように`main.py`の冒頭で指定してください。
+
 ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/2524638/133b5b9d-a2a0-4329-a5d9-204ac13dcd0a.png)
 
 たとえば、プロンプトの例は以下のようになります。
@@ -83,6 +84,7 @@ pip install https://github.com/VOICEVOX/voicevox_core/releases/download/0.16.0/v
 ```
 ### OpenAI API keyの指定
 先ほどと同じ場所に、OpenAIから発行されるAPI Keyを格納したテキストファイルをおいてください。Keyの発行方法などは別途記事を参照してください。ファイル名は例えば`key.txt`などとし、下記のように`GPT.py`の冒頭で指定してください。
+
 ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/2524638/c111cf6b-772e-4dd0-b651-95759c117eae.png)
 
 # 実行
