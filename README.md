@@ -100,5 +100,3 @@ https://github.com/SYSTRAN/faster-whisper
 https://github.com/VOICEVOX/voicevox_core
 
 https://github.com/snakers4/silero-vad
-
-# ライセンス
