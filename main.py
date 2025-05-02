@@ -60,8 +60,8 @@ if __name__ == "__main__":
 
     while True:
         # ユーザーの発話を取得
-        if not myASR.user_utterance.empty():
-            user_utterance = myASR.user_utterance.get()
+        if not myASR.user_text.empty():
+            user_utterance = myASR.user_text.get()
             print(user_utterance)
             myGPT.update_messages(user_utterance, "user")
 

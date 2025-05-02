@@ -50,7 +50,7 @@ class GPT:
         while True:
             if not self.messages[-1]["role"] == "assistant":
                 if len(ASR.vad_full) > 0:
-                    if len(np.concatenate(ASR.buf_user)) - ASR.vad_full[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
+                    if ASR.VAD_LEN - ASR.vad_full[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
                         self.robot_turn = True
                 else:
                     self.robot_turn = False
