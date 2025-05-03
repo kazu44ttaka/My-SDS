@@ -9,16 +9,16 @@ class ASR:
         self.device = device                             # 動作デバイス指定
         self.compute_type = compute_type                 # 演算精度指定
         self.SILENCE_TIME = 0.05                         # 発話の区切りを検出する秒数(秒)
-        self.CHUNK_SEC = 3.0                             # ASRモデルに渡す秒数の間隔(秒)
+        self.CHUNK_SEC = 3.0                             # ASRモデルに渡す秒数の最大値(秒)
         self.SAMPLE_RATE = 16000                         # サンプリングレート
         self.BLOCK = 320                                 # 1ブロック当たりのサンプル数
         self.VAD_SECONDS = 5                             # VADを実施する秒数(秒)
-        self.vad_full = []                               # VAD_LEN秒のVAD結果を保存
-        self.VAD_LEN = 0
+        self.vad_full = []                               # VAD_SECONDS秒のVAD結果を保存
+        self.VAD_LEN = 0                                 # vadの長さ
 
         self.audio_q = queue.Queue()                     # マイクからの音声を保持するQueue
-        self.audio2inf = queue.Queue()
-        self.user_text = queue.Queue()              # ASR結果のテキストを保持するQueue
+        self.audio2inf = queue.Queue()                   # 推論に回す音声を保持するQueue
+        self.user_text = queue.Queue()                   # ASR結果のテキストを保持するQueue
         
         # Fast-whisperモデルを定義
         if use_path:
