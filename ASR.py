@@ -8,7 +8,7 @@ class ASR:
         self.model_size_or_path = model_size_or_path     # 同上
         self.device = device                             # 動作デバイス指定
         self.compute_type = compute_type                 # 演算精度指定
-        self.SILENCE_TIME = 0.05                         # 発話の区切りを検出する秒数(秒)
+        self.SILENCE_TIME = 0.1                          # 発話の区切りを検出する秒数(秒)
         self.CHUNK_SEC = 3.0                             # ASRモデルに渡す秒数の最大値(秒)
         self.SAMPLE_RATE = 16000                         # サンプリングレート
         self.BLOCK = 320                                 # 1ブロック当たりのサンプル数
@@ -68,7 +68,7 @@ class ASR:
                     threshold=0.3,                          # VADの出力を音声と判断するしきい値
                     min_speech_duration_ms=150,              # 発話とみなす最短長（ミリ秒）
                     max_speech_duration_s=self.VAD_SECONDS, # 発話区間の最大長（秒）
-                    min_silence_duration_ms=50,            # 区切りとみなす無音の最短長（ミリ秒）
+                    min_silence_duration_ms=100,            # 区切りとみなす無音の最短長（ミリ秒）
                     window_size_samples=1024,               # 内部処理に使うウィンドウサイズ（サンプル数）
                     speech_pad_ms=150,                      # 出力範囲の前後に付け足すバッファ時間（ミリ秒）
                     )

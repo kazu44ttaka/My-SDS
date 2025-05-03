@@ -92,4 +92,4 @@ if __name__ == "__main__":
             myGPT.robot_turn = False
 
         # print("latency :", myASR.audio_q.qsize() * (myASR.BLOCK / myASR.SAMPLE_RATE), "s")
-        time.sleep(0.1)
+        time.sleep(0.05)

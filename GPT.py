@@ -18,7 +18,7 @@ class GPT:
         self.context_len = context_len             # GPTに送る会話数
         self.robot_turn = False                    # ロボットのターンを制御
         self.SAMPLE_RATE = 16000                   # サンプリングレート
-        self.MAX_SILENCE_TIME = 0.3                # ユーザーが話し終わってからエージェントが話し出すまでの時間(秒)
+        self.MAX_SILENCE_TIME = 0.4                # ユーザーが話し終わってからエージェントが話し出すまでの時間(秒)
         
         self.robot_utterance = queue.Queue()       # ロボットの発話を管理するQueue
 
@@ -48,7 +48,7 @@ class GPT:
     # ロボットがターンを取るかどうか
     def turn_taking(self, ASR:ASR):
         while True:
-            if not self.messages[-1]["role"] == "assistant":
+            if self.messages[-1]["role"] == "user":
                 if len(ASR.vad_full) > 0:
                     if ASR.VAD_LEN - ASR.vad_full[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
                         self.robot_turn = True
