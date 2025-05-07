@@ -1,5 +1,7 @@
 # My-SDS
 faster-Whisper、ChatGPT API、VOICEVOX coreを組み合わせた音声対話システムです。ASR、TTSをローカル環境で動かし、高速なレスポンス生成を実現しています。
+
+Qiita記事はこちら->https://qiita.com/kazu44ttaka/items/54daefa3cbc81718f284
  
 # 想定環境
 - Windows OS
