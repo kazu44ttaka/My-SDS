@@ -1,0 +1,16 @@
+{
+  "window": {
+    "width": "1920",
+    "height": "1080",
+    "top": "0",
+    "left": "0"
+  },
+  "websocket": {
+    "server_port": "9001",
+    "client_host": "localhost",
+    "client_port": "8443"
+  },
+  "mmdagent_exec": "F:\\MMDAgent-EX\\Release\\MMDAgent-EX.exe",
+  "mmdagent_mdf": "F:\\MMDAgent-EX\\example\\main.mdf",
+  "mmdagent_python_command": "python.exe"
+}
