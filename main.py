@@ -1,8 +1,7 @@
 import ASR, GPT, threading, time, TTS
-import numpy as np
 import asyncio
-import websockets
 import re
+import global_vars as g
 
 # プロンプトを記載したファイルを指定
 PROMPT_FILE = "prompt.txt"
@@ -23,9 +22,7 @@ emoji_pattern = re.compile(
         u"\U00002500-\U00002BEF"
         "]+", flags=re.UNICODE)
 
-if __name__ == "__main__":
-    # MMD-Agentを用いるか
-    use_MMD = False
+def main():
     myASR = ASR.ASR()
 
     # ASR、マイクからの音声処理、VAD用のスレッドを定義
@@ -35,7 +32,7 @@ if __name__ == "__main__":
 
     myGPT = GPT.GPT()
     myGPT.init_prompt(sys_prompt=sys_prompt)
-    
+
     # ターンテイキング用のスレッドを定義
     threading.Thread(target=myGPT.turn_taking, daemon=True, args=(myASR,)).start()
 
@@ -46,19 +43,14 @@ if __name__ == "__main__":
         asyncio.set_event_loop(loop)
         loop.run_forever()
 
-    async def server_main():
-        await websockets.serve(myTTS.send_voice, "localhost", 9001)
-
     # 音声合成用のスレッドを定義
     threading.Thread(target=loop_runner, daemon=True, args=(loop_voice_synth,)).start()
     asyncio.run_coroutine_threadsafe(myTTS.init_model(), loop_voice_synth).result()
-    
-    if use_MMD:
-        asyncio.run_coroutine_threadsafe(server_main(), loop_voice_synth).result()
-    else:
+
+    if not g.use_MMD:
         threading.Thread(target=myTTS.speak, daemon=True).start()
 
-    while True:
+    while not g.main_event.is_set():
         # ユーザーの発話を取得
         if not myASR.user_text.empty():
             user_utterance = myASR.user_text.get()
@@ -93,3 +85,10 @@ if __name__ == "__main__":
 
         # print("latency :", myASR.audio_q.qsize() * (myASR.BLOCK / myASR.SAMPLE_RATE), "s")
         time.sleep(0.05)
+    
+    myASR.event.set()
+    myGPT.event.set()
+    myTTS.event.set()
+
+# if __name__ == "__main__":
+#     main()

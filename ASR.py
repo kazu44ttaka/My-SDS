@@ -28,11 +28,13 @@ class ASR:
 
         # VADモデルを定義
         self.vad_model = silero_vad.load_silero_vad()
+        # ループを止めるためのEventを定義
+        self.event = threading.Event()
 
     # ASR
     def worker(self):
         buf_voice = []
-        while True:
+        while not self.event.is_set():
             segment = self.audio2inf.get()
             if len(segment) < self.SAMPLE_RATE * 0.5:
                 continue
@@ -54,7 +56,7 @@ class ASR:
         trigger = False
         num_vad = 5
         last_index = 0
-        while True:
+        while not self.event.is_set():
             data = self.audio_q.get()
             buf_user.append(data[:,0])
             buf_user = buf_user[- int(self.VAD_SECONDS / (self.BLOCK / self.SAMPLE_RATE)):]
@@ -116,7 +118,7 @@ class ASR:
                             latency='low',
                             callback=self.callback):
             print("Listening... Ctrl+C to stop.")
-            while True: 
+            while not self.event.is_set(): 
                 # if self.audio_q.qsize() > 0:
                 #     print("qsize :", self.audio_q.qsize(), "*", self.audio_q.queue[0].shape)
                 time.sleep(0.5)

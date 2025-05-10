@@ -1,5 +1,4 @@
 import flet as ft
-import threading
 import subprocess
 import io
 import base64
@@ -8,6 +7,7 @@ import pygetwindow as gw
 
 ffmpeg_process = None
 DUMMY_IMAGE_PATH = "dummy.png"
+WINDOW_TITLE = "MMDAgent-EX - Toolkit for conversational user interface and voice interaction"
 
 # FFmpeg プロセスを開始して MJPEG ストリームを取得
 def start_ffmpeg():
@@ -48,8 +48,12 @@ def stop_ffmpeg():
 
 # ウィンドウが存在しているかチェック
 def is_window_open(window_title):
-    windows = gw.getWindowsWithTitle(window_title)
-    return len(windows) > 0
+    try:
+        windows = gw.getWindowsWithTitle(window_title)
+        return len(windows) > 0
+    except Exception as e:
+        print(f"[WARNING] Window detection error: {e}")
+        return False
 
 # 外部画像を読み込み、Base64 形式で返す
 def load_external_image():
@@ -68,7 +72,7 @@ def mjpeg_reader(image_control: ft.Image):
     external_image_b64 = load_external_image()
     while True:
         # MMDAgent-EX が存在しているか確認
-        if is_window_open("MMDAgent-EX - Toolkit for conversational user interface and voice interaction"):
+        if is_window_open(WINDOW_TITLE):
             # FFmpeg プロセスが未起動または停止している場合、再起動
             if ffmpeg_process is None or ffmpeg_process.poll() is not None:
                 start_ffmpeg()
@@ -107,11 +111,15 @@ def mjpeg_reader(image_control: ft.Image):
         else:
             # ウィンドウが閉じられている場合は FFmpeg プロセスを停止
             stop_ffmpeg()
+            buffer = b""
 
             # キャプチャをクリア
             if image_control.src_base64 != external_image_b64:
                 image_control.src_base64 = external_image_b64
-                image_control.update()
+                try:
+                    image_control.update()
+                except Exception as e:
+                    print(f"[ERROR] Image processing error: {e}")
 
 # def main(page: ft.Page):
 #     page.title = "MMDAgent-EX キャプチャ表示"

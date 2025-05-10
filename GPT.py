@@ -1,8 +1,10 @@
 from openai import OpenAI
 import queue
 import time
-import numpy as np
 import ASR
+import threading
+
+import global_vars as g
 
 # ChatGPTのkeyが書かれたファイルを指定
 KEY_FILE = "key.txt"
@@ -21,34 +23,35 @@ class GPT:
         self.MAX_SILENCE_TIME = 0.4                # ユーザーが話し終わってからエージェントが話し出すまでの時間(秒)
         
         self.robot_utterance = queue.Queue()       # ロボットの発話を管理するQueue
+        self.event = threading.Event()             # ループを止めるためのEventを定義
 
     # 発話をストリームとして生成
     def create_response(self):
         stream = self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages,
+            messages=g.messages,
             stream=True
         )
         return stream
 
     # プロンプトを初期化
     def init_prompt(self, sys_prompt):
-        self.messages = [
+        g.messages = [
             {"role": "system", "content": sys_prompt},
         ]
 
     # プロンプトを更新
     def update_messages(self, message, role):
-        if len(self.messages) > self.context_len + 1:
-            self.messages = [self.messages[0]] + self.messages[2:] + [{"role": role, "content": message}]
+        if len(g.messages) > self.context_len + 1:
+            g.messages = [g.messages[0]] + g.messages[2:] + [{"role": role, "content": message}]
         else:
-            self.messages.append({"role": role, "content": message})
-        return self.messages
+            g.messages.append({"role": role, "content": message})
+        return g.messages
 
     # ロボットがターンを取るかどうか
     def turn_taking(self, ASR:ASR):
-        while True:
-            if self.messages[-1]["role"] == "user":
+        while not self.event.is_set():
+            if g.messages[-1]["role"] == "user":
                 if len(ASR.vad_full) > 0:
                     if ASR.VAD_LEN - ASR.vad_full[-1]["end"] > self.SAMPLE_RATE * self.MAX_SILENCE_TIME:
                         self.robot_turn = True

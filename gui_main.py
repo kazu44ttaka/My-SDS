@@ -1,14 +1,15 @@
 import flet as ft
 import pref
 import os
-import time
-import asyncio
 import subprocess
 import global_vars as g
-import io
-import base64
+import ws
 import capture
 import threading
+import main
+import atexit
+
+WINDOW_TITLE = "MMDAgent-EX - Toolkit for conversational user interface and voice interaction"
 
 def gui_main(page: ft.Page):
     # load preference
@@ -21,11 +22,7 @@ def gui_main(page: ft.Page):
     page.window.top = int(pref.data["window"]["top"])
     page.window.left = int(pref.data["window"]["left"])
     page.update()
-    
-    run_exec = ft.Text(pref.data["mmdagent_exec"])
-    run_mdf = ft.Text(pref.data["mmdagent_mdf"])
-    run_pycom = ft.Text(pref.data["mmdagent_python_command"])
-    
+
     def run_mmdagent(e):
         command = [run_exec.value, run_mdf.value]
         env = os.environ.copy()
@@ -35,7 +32,59 @@ def gui_main(page: ft.Page):
         env["WEBSOCKET_CHANNEL"] = "/chat"
         env["MMDAGENT_FULLSCREEN"] = "false"
         g.mmdagent_process = subprocess.Popen(command, env=env)
-        capture.start_ffmpeg()
+
+    def stop_mmdagent(e=None):
+        if g.mmdagent_process:
+            g.mmdagent_process.terminate()
+            g.mmdagent_process = None
+
+    def start_main(e):
+        g.main_event = threading.Event()
+        g.main_thread = threading.Thread(target=main.main, daemon=True)
+        if capture.is_window_open(WINDOW_TITLE):
+            g.use_MMD = True
+        else:
+            g.use_MMD = False
+        g.main_thread.start()
+
+    def stop_main(e):
+        if g.main_thread:
+            g.main_event.set()
+            g.main_thread = None
+
+    talk = ft.Container(
+        content=ft.Column(
+            [
+                ft.FilledButton(
+                    "Launch local MMDAgent-EX",
+                    on_click=run_mmdagent
+                ),
+                ft.FilledButton(
+                    "Stop local MMDAgent-EX",
+                    on_click=stop_mmdagent
+                ),
+                ft.FilledButton(
+                    "Start Talking",
+                    on_click=start_main
+                ),
+                ft.FilledButton(
+                    "Stop Talking",
+                    on_click=stop_main
+                )
+            ],
+            expand=True
+        ),
+        bgcolor=ft.Colors.ON_INVERSE_SURFACE,
+        border=ft.border.all(1, ft.Colors.OUTLINE),
+        padding=2,
+        margin=2,
+        border_radius=10,
+        expand=True
+    )
+    
+    run_exec = ft.Text(pref.data["mmdagent_exec"])
+    run_mdf = ft.Text(pref.data["mmdagent_mdf"])
+    run_pycom = ft.Text(pref.data["mmdagent_python_command"])
 
     def pick_exec_file_result(e: ft.FilePickerResultEvent):
         if e.files:
@@ -65,7 +114,7 @@ def gui_main(page: ft.Page):
     page.overlay.append(pick_exec_files_dialog)
     page.overlay.append(pick_mdf_files_dialog)
     page.overlay.append(pick_python_exec_files_dialog)
-    
+
     run_MMD = ft.Container(
         content=ft.Column(
             [
@@ -106,77 +155,69 @@ def gui_main(page: ft.Page):
                                     allowed_extensions=["exe"]
                                 ),
                         ),
-                    ]
-                ),
-                ft.FilledButton(
-                    "Launch local MMDAgent-EX",
-                    on_click=run_mmdagent
+                    ],
                 )
-            ]
+            ],
+            expand=True
         ),
         bgcolor=ft.Colors.ON_INVERSE_SURFACE,
         border=ft.border.all(1, ft.Colors.OUTLINE),
         padding=2,
         margin=2,
         border_radius=10,
+        expand=True
     )
-    
-    def tab_selected(e):
-        g.tab_index = tabs.selected_index
-        # if g.tab_index == 3:
-        #     video.volume = 100.0
-        #     play_button.visible = False
-        #     page.update()
-        #     if websocket_comm_fix.read_txtfile():
-        #         play_button.visible = True
-        #     page.update()
-        # else:
-        #     video.volume = 0.0
-    
+
     # キャプチャ画像の初期化
-    img = ft.Image(width=800, height=800, src_base64=capture.load_external_image())
-    
+    img = ft.Image(width=800, height=800, src_base64=capture.load_external_image(), expand=True)
+
     tabs = ft.Tabs(
         selected_index=0,
         tabs=[
             ft.Tab(
+                text="Talk",
+                icon=ft.Icons.SETTINGS,
+                content=ft.Container(
+                    talk
+                )
+            ),
+            ft.Tab(
                 text="Settings",
                 icon=ft.Icons.SETTINGS,
                 content=ft.Container(
-                    content=ft.Column(
-                        [
-                            run_MMD,
-                        ]
-                    )
+                    run_MMD
                 )
             ),
         ],
-        expand=1,
-        width=page.window.width - 40,
-        height=page.window.height,
-        on_change=tab_selected
+        expand=True
     )
-    
+
     page.add(
-        ft.Container(
-            content=ft.Row(
-                [
-                img,
+        ft.Row(
+            [
+                ft.Container(
+                    content=img,
+                    expand=True
+                ),
                 ft.Container(
                     content=ft.Column(
                         controls=[
                             tabs,
                         ],
-                        alignment=ft.MainAxisAlignment.START
+                        expand=True
                     ),
+                    expand=True
                 )
-                ],
-                vertical_alignment=ft.CrossAxisAlignment.START
-            ),
+            ],
+            expand=True
         ),
     )
+
     page.update()
     threading.Thread(target=capture.mjpeg_reader, args=(img,), daemon=True).start()
-    
+    threading.Thread(target=ws.server_start_asyn, daemon=True).start()
+
+    atexit.register(stop_mmdagent)
+
 if __name__ == "__main__":
     ft.app(target=gui_main)
